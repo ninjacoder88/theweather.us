@@ -1,6 +1,13 @@
 const http = require("http");
+const url = require("url");
+const getHandler = require("./getHandler.js");
+const requestHandler = require("./requestHandler");
 
 const server = http.createServer();
+
+requestHandler.get("/test", (req) => {
+
+});
 
 server.on("request", (request, response) => {
     request.on("error", (err) => {
@@ -13,35 +20,42 @@ server.on("request", (request, response) => {
         console.error(err);
     });
 
-
-    //some magic
     const { method, url } = request;
     const { headers } = request;
     const userAgent = headers["user-agent"];
 
-    switch(method){
-        case "POST":
-            response.statusCode = 405;
-            response.end();
-            break;
-        case "GET":
-            switch(url){
-                case "/":
-                    response.statusCode = 200;
-                    response.write("{test: object}");
-                    response.end();
-                    break;
-                default:
-                    response.statusCode = 404;
-                    response.end();
-                    break;
-            }
-            break;
-        default:
-            response.statusCode = 404;
-            response.end();
-            break;
-    }
+    let body = [];
+    request.on("data", (chunk) => {
+        body.push(chunk);
+    }).on("end", () => {
+        body = Buffer.concat(body).toString();
+        response.on("error", (err) => {
+            console.error(err);
+        });
+    });
+
+    var handledResponse = requestHandler.handle(method, url, body);
+    
+    response.statusCode = handledResponse.statusCode;
+    response.write(handledResponse.obj);
+    response.end();
+
+    // switch(method){
+    //     case "POST":
+    //         response.statusCode = 405;
+    //         response.end();
+    //         break;
+    //     case "GET":
+    //         var obj = getHandler.handle(url);
+    //         response.statusCode = obj.statusCode;
+    //         response.write(obj.obj);
+    //         response.end();
+    //         break;
+    //     default:
+    //         response.statusCode = 404;
+    //         response.end();
+    //         break;
+    // }
 });
 
 server.listen(8090);
@@ -49,9 +63,7 @@ server.listen(8090);
 /*
 let body = [];
 
-    request.on("error", (err) => {
-        console.error(err);
-    }).on("data", (chunk) => {
+    request.on("data", (chunk) => {
         body.push(chunk);
     }).on("end", () => {
         body = Buffer.concat(body).toString();
