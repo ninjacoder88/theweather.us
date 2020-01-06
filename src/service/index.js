@@ -1,12 +1,15 @@
 const http = require("http");
 const url = require("url");
-const getHandler = require("./getHandler.js");
 const requestHandler = require("./requestHandler");
 
 const server = http.createServer();
 
-requestHandler.get("/test", (req) => {
+requestHandler.get("/test", (obj) => {
+    var t = obj.url.searchParams.get('query');//this can be null
 
+    return {
+        message: "hello"
+    }
 });
 
 server.on("request", (request, response) => {
@@ -20,9 +23,8 @@ server.on("request", (request, response) => {
         console.error(err);
     });
 
-    const { method, url } = request;
-    const { headers } = request;
-    const userAgent = headers["user-agent"];
+    const { method, url, headers } = request;
+    //const userAgent = headers["user-agent"];
 
     let body = [];
     request.on("data", (chunk) => {
@@ -34,49 +36,18 @@ server.on("request", (request, response) => {
         });
     });
 
-    var handledResponse = requestHandler.handle(method, url, body);
-    
-    response.statusCode = handledResponse.statusCode;
-    response.write(handledResponse.obj);
-    response.end();
+    console.log({
+        method: method,
+        url: url
+    });
 
-    // switch(method){
-    //     case "POST":
-    //         response.statusCode = 405;
-    //         response.end();
-    //         break;
-    //     case "GET":
-    //         var obj = getHandler.handle(url);
-    //         response.statusCode = obj.statusCode;
-    //         response.write(obj.obj);
-    //         response.end();
-    //         break;
-    //     default:
-    //         response.statusCode = 404;
-    //         response.end();
-    //         break;
-    // }
+    const handledResponse = requestHandler.handle(method, url, body);
+    const jsonObj = handledResponse.obj === undefined ? "" : JSON.stringify(handledResponse.obj);
+
+    response.setHeader("Content-Type", "application/json");
+    response.statusCode = handledResponse.statusCode;
+    response.write(jsonObj);
+    response.end();
 });
 
 server.listen(8090);
-
-/*
-let body = [];
-
-    request.on("data", (chunk) => {
-        body.push(chunk);
-    }).on("end", () => {
-        body = Buffer.concat(body).toString();
-        response.on("error", (err) => {
-            console.error(err);
-        });
-    });
-
-    response.setHeader("Content-Type", "application/json");
-    response.statusCode = 200;
-
-    const responseBody = { headers, method, url, body };
-
-    response.write(JSON.stringify(responseBody));
-    response.end();
-    */
